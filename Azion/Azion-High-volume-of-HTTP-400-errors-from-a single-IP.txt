@@ -6,8 +6,9 @@
 //              Reference: https://semaphore.io/blog/http-status-codes
 // MITRE ATT&CK: T1595 Active Scanning (https://attack.mitre.org/techniques/T1595/)
 
+// Define variables
 let TimeFrame = 5m;
-let Threshold = 1000;
+let Threshold = 3000; // Tune based on environment volume
 
 // Aggregate trusted IPs from Sentinel Watchlists to reduce false positives
 let ExcludedIPs = 
