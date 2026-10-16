@@ -1,0 +1,25 @@
+// Title: Azion - High Volume of HTTP 400 (Bad Request) Errors from Single IP
+// Description: Monitors HTTP requests resulting in status 400 (Bad Request). 
+//              The goal is to identify anomalous traffic patterns that may indicate 
+//              automated attacks, scanning attempts, or client application misconfiguration. 
+//              Known and trusted IPs can be excluded.
+//              Reference: https://semaphore.io/blog/http-status-codes
+// MITRE ATT&CK: T1595 Active Scanning (https://attack.mitre.org/techniques/T1595/)
+
+let TimeFrame = 5m;
+let Threshold = 1000;
+
+// Aggregate trusted IPs from Sentinel Watchlists to reduce false positives
+let ExcludedIPs = 
+    union
+        (_GetWatchlist('IPs_1') | project SearchKey),
+        (_GetWatchlist('IPs_2') | project SearchKey);
+
+// Query Azion edge logs filtered by HTTP status 400 and excluding trusted IPs
+AzionEdgeLogs_CL
+| where TimeGenerated >= ago(TimeFrame) // Restricts the scope to recent data for performance optimization
+| where remote_addr !in (ExcludedIPs)    // Filters out known/trusted entities from Watchlists
+| where status == "400"                  // Isolates client-side bad request errors
+| summarize RequestsCount = count() by remote_addr, bin(TimeGenerated, TimeFrame)
+| where RequestsCount > Threshold        // Triggers alert if volume exceeds the defined threshold within the time window
+| project TimeGenerated, remote_addr, RequestsCount
